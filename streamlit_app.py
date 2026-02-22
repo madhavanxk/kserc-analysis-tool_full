@@ -385,7 +385,7 @@ if uploaded_file:
                 st.stop()
 
             # ── SBU-T extraction quality ──
-            sbu_t_items_check = results.get('sbu_t', {}).get('line_items', [])
+            sbu_t_items_check = [i for i in results.get("sbu_t", {}).get("line_items", []) if isinstance(i, dict)]
             sbu_t_with_data = sum(1 for i in sbu_t_items_check if (i.get('claimed') or 0) > 0.5)
             if not sbu_t_items_check:
                 st.error("⛔ SBU-T extraction failed — transmission data is missing. "
@@ -396,7 +396,7 @@ if uploaded_file:
                            f"Verify manually before using consolidated figures.")
 
             # ── SBU-D extraction quality ──
-            sbu_d_items_check = results.get('sbu_d', {}).get('line_items', [])
+            sbu_d_items_check = [i for i in results.get("sbu_d", {}).get("line_items", []) if isinstance(i, dict)]
             sbu_d_with_data = sum(1 for i in sbu_d_items_check if (i.get('claimed') or 0) > 0.5)
             if not sbu_d_items_check:
                 st.error("⛔ SBU-D extraction failed — distribution data is missing. "

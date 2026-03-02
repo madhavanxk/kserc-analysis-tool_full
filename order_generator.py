@@ -76,7 +76,7 @@ def _gemini_draft_all(api_key: str, bg_prompt: str, sbu_g_prompt: str,
                        sbu_d_prompt: str) -> tuple:
     """Single Gemini call for all three sections — avoids rate limit issues."""
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    model = genai.GenerativeModel('gemini-2.0-flash-lite')
 
     combined_prompt = f"""You are drafting sections of a formal KSERC regulatory order.
 Complete all three tasks below. Use XML tags to separate your responses exactly as shown.

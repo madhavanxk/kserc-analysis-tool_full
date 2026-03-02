@@ -9,7 +9,7 @@ import io
 import json
 from datetime import datetime
 
-import google.generativeai as genai
+import requests
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -74,9 +74,8 @@ def _variance(claimed, allowable) -> str:
 
 def _gemini_draft_all(api_key: str, bg_prompt: str, sbu_g_prompt: str,
                        sbu_d_prompt: str) -> tuple:
-    """Single Gemini call for all three sections — avoids rate limit issues."""
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.0-flash-lite')
+    """Single Gemini REST call — no library version issues."""
+    import re
 
     combined_prompt = f"""You are drafting sections of a formal KSERC regulatory order.
 Complete all three tasks below. Use XML tags to separate your responses exactly as shown.
@@ -104,17 +103,19 @@ Respond in this exact format:
 [your SBU-D findings text here]
 </sbu_d>"""
 
-    response = model.generate_content(
-        combined_prompt,
-        generation_config=genai.GenerationConfig(
-            max_output_tokens=4096,
-            temperature=0.3,
-        )
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-2.5-flash:generateContent?key={api_key}"
     )
-    text = response.text.strip()
+    payload = {
+        "contents": [{"parts": [{"text": combined_prompt}]}],
+        "generationConfig": {"maxOutputTokens": 4096, "temperature": 0.3}
+    }
+    resp = requests.post(url, json=payload, timeout=120)
+    resp.raise_for_status()
+    text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
 
     def extract(tag, txt):
-        import re
         m = re.search(rf'<{tag}>(.*?)</{tag}>', txt, re.DOTALL)
         return m.group(1).strip() if m else ''
 

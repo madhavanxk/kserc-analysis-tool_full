@@ -75,7 +75,7 @@ def _variance(claimed, allowable) -> str:
 def _gemini_draft(api_key: str, prompt: str, max_tokens: int = 2048) -> str:
     """Call Gemini Flash and return text."""
     genai.configure(api_key=api_key)
-    model    = genai.GenerativeModel('gemini-1.5-flash')
+    model    = genai.GenerativeModel('gemini-2.0-flash')
     response = model.generate_content(
         prompt,
         generation_config=genai.GenerationConfig(

@@ -368,6 +368,8 @@ if uploaded_file:
             f_out = io.StringIO()
             with redirect_stdout(f_out):
                 results = process_petition(tmp_path)
+                st.session_state['results'] = results
+                st.session_state['uploaded_name'] = uploaded_file.name
 
             prog.progress(80)
             status.markdown("**Step 2/3:** Running heuristics...")
@@ -431,11 +433,12 @@ if uploaded_file:
         finally:
             os.unlink(tmp_path)
 
-        st.markdown("---")
+    # ── RESULTS — render from session_state (persists across reruns) ──
+    if 'results' in st.session_state:
+        results = st.session_state['results']
+        meta    = results.get('metadata', {})
 
-        # ─────────────────────────────────────────────────────────────────────
-        # RESULTS
-        # ─────────────────────────────────────────────────────────────────────
+        st.markdown("---")
 
         line_items = results.get('line_items', {})
         meta       = results.get('metadata', {})

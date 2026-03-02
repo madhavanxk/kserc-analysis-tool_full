@@ -165,6 +165,18 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
+    st.markdown("---")
+    st.markdown("**📝 Draft Order Generation**")
+    st.caption("Powered by Google Gemini Flash (free tier)")
+    gemini_api_key = st.text_input(
+        "Gemini API Key",
+        type="password",
+        placeholder="Paste your free Gemini API key here",
+        help="Get a free key at aistudio.google.com — no credit card needed."
+    )
+    if not gemini_api_key:
+        st.caption("🔑 Add key above to enable draft order generation after analysis.")
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN — UPLOAD + RUN
@@ -842,6 +854,57 @@ if uploaded_file:
                 mime="application/json",
                 use_container_width=True
             )
+
+        # ── DRAFT ORDER GENERATION ──
+        st.markdown("---")
+        st.markdown('<div class="section-header">📝 Draft Order Generation</div>',
+                    unsafe_allow_html=True)
+
+        if not gemini_api_key:
+            st.info("🔑 Add your free Gemini API key in the sidebar to generate a draft order.")
+        else:
+            order_col, _ = st.columns([1, 3])
+            with order_col:
+                gen_order_btn = st.button(
+                    "📄 Generate Draft Order (Word)",
+                    type="primary",
+                    use_container_width=True,
+                    help="Uses Gemini Flash (free) to draft a KSERC order based on analysis results."
+                )
+
+            if gen_order_btn:
+                order_prog   = st.progress(0)
+                order_status = st.empty()
+
+                def order_progress(pct, msg):
+                    order_prog.progress(pct)
+                    order_status.markdown(f"**{msg}**")
+
+                try:
+                    from order_generator import generate_order
+                    order_bytes = generate_order(
+                        results,
+                        api_key=gemini_api_key,
+                        progress_callback=order_progress
+                    )
+                    order_prog.progress(100)
+                    order_status.markdown("✅ **Draft order ready!**")
+
+                    st.download_button(
+                        label="⬇️ Download Draft Order (.docx)",
+                        data=order_bytes,
+                        file_name=f"KSERC_Draft_Order_{meta.get('fiscal_year','2024-25')}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        use_container_width=True
+                    )
+                    st.caption(
+                        "⚠️ This is an AI-generated draft for internal review only. "
+                        "All findings and directions must be verified by authorised KSERC officers."
+                    )
+                except Exception as e:
+                    st.error(f"❌ Order generation failed: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
 
 else:
     st.markdown("""

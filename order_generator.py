@@ -72,18 +72,57 @@ def _variance(claimed, allowable) -> str:
 # GEMINI CALL
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _gemini_draft(api_key: str, prompt: str, max_tokens: int = 2048) -> str:
-    """Call Gemini Flash and return text."""
+def _gemini_draft_all(api_key: str, bg_prompt: str, sbu_g_prompt: str,
+                       sbu_d_prompt: str) -> tuple:
+    """Single Gemini call for all three sections — avoids rate limit issues."""
     genai.configure(api_key=api_key)
-    model    = genai.GenerativeModel('gemini-2.0-flash')
+    model = genai.GenerativeModel('gemini-2.0-flash')
+
+    combined_prompt = f"""You are drafting sections of a formal KSERC regulatory order.
+Complete all three tasks below. Use XML tags to separate your responses exactly as shown.
+
+<task1>
+{bg_prompt}
+</task1>
+
+<task2>
+{sbu_g_prompt}
+</task2>
+
+<task3>
+{sbu_d_prompt}
+</task3>
+
+Respond in this exact format:
+<background>
+[your background text here]
+</background>
+<sbu_g>
+[your SBU-G findings text here]
+</sbu_g>
+<sbu_d>
+[your SBU-D findings text here]
+</sbu_d>"""
+
     response = model.generate_content(
-        prompt,
+        combined_prompt,
         generation_config=genai.GenerationConfig(
-            max_output_tokens=max_tokens,
+            max_output_tokens=4096,
             temperature=0.3,
         )
     )
-    return response.text.strip()
+    text = response.text.strip()
+
+    def extract(tag, txt):
+        import re
+        m = re.search(rf'<{tag}>(.*?)</{tag}>', txt, re.DOTALL)
+        return m.group(1).strip() if m else ''
+
+    return (
+        extract('background', text),
+        extract('sbu_g',      text),
+        extract('sbu_d',      text),
+    )
 
 
 def _sbu_g_section_prompt(line_items: dict, fiscal_year: str) -> str:
@@ -193,17 +232,15 @@ def generate_order(results: dict, api_key: str,
 
     today = datetime.now().strftime('%d %B %Y')
 
-    # ── 1. AI-generated sections ──
-    progress(5, "Drafting background section...")
-    bg_text = _gemini_draft(api_key, _background_prompt(meta, consolidated, fiscal_year))
-
-    progress(25, "Drafting SBU-G findings...")
-    sbu_g_text = _gemini_draft(api_key, _sbu_g_section_prompt(line_items, fiscal_year))
-
-    progress(50, "Drafting SBU-D findings...")
-    sbu_d_text = _gemini_draft(api_key, _sbu_d_section_prompt(sbu_d_items, fiscal_year))
-
-    progress(70, "Building Word document...")
+    # ── 1. AI-generated sections (single API call) ──
+    progress(5, "Drafting order text with Gemini...")
+    bg_text, sbu_g_text, sbu_d_text = _gemini_draft_all(
+        api_key,
+        _background_prompt(meta, consolidated, fiscal_year),
+        _sbu_g_section_prompt(line_items, fiscal_year),
+        _sbu_d_section_prompt(sbu_d_items, fiscal_year),
+    )
+    progress(60, "Building Word document...")
 
     # ── 2. Build Word document ──
     doc = Document()

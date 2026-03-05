@@ -99,7 +99,7 @@ LOAN_AVG_RATE_SBU_G     = 8.84      # % weighted average
 # =============================================================================
 
 GPF_INTEREST_RATE    = 7.10   # % (confirmed)
-SBU_G_GPF_RATIO      = 5.40   # % (same as employee strength ratio)
+SBU_G_GPF_RATIO      = 5.13   # % (same as employee strength ratio)
 
 # Company-wide GPF balances by year (Rs Cr)
 GPF_OPENING_BALANCE = {
@@ -125,7 +125,7 @@ GPF_TOTAL_INTEREST = {
 }
 
 # SBU-G employee strength ratio (used for allocation)
-SBU_G_EMPLOYEE_RATIO = 5.40   # %
+SBU_G_EMPLOYEE_RATIO = 5.13  # %
 
 # Total company-wide Master Trust bond interest by year (Rs Cr)
 MT_BOND_TOTAL_COMPANY = {
@@ -299,4 +299,4 @@ IWC_RATE_APPROVED = 9.55       # % (same as SBU-G/T)
 
 # T&D loss reduction gain sharing (Regulation 37, TR 2021)
 # KSEB gets 50% of gains from over-achievement of T&D loss target
-TD_LOSS_GAIN_SHARE_PCT = 50.0  # %
+TD_LOSS_GAIN_SHARE_PCT = 66.7  # %

@@ -486,6 +486,129 @@ if uploaded_file:
                     item.get('primary_heuristic', {}).get('allowable_value') or 0)
 
         # ─────────────────────────────────────────────────────────────────────
+        # STAFF REVIEW COMPONENT (reused across SBU-G, SBU-T, SBU-D)
+        # ─────────────────────────────────────────────────────────────────────
+
+        def render_staff_review_inline(item_ref: dict, widget_key: str, allowable_amount: float):
+            """
+            Render staff review UI inside a line item expander.
+            Mutates item_ref in-place — changes persist in session_state['results'].
+
+            Args:
+                item_ref:         The result dict for this line item (mutable reference).
+                widget_key:       Unique string for Streamlit widget keys.
+                allowable_amount: System-calculated allowable amount (pre-fill for override).
+            """
+            st.markdown("---")
+            review_status = item_ref.get('staff_review_status', 'Pending')
+
+            # ── Already reviewed ──
+            if review_status in ('Accepted', 'Overridden'):
+                decision_color = "#28a745" if review_status == "Accepted" else "#ffc107"
+                approved_amt   = item_ref.get('staff_approved_amount', allowable_amount)
+                st.markdown(
+                    f'<div style="background:#f0fdf4;border-left:4px solid {decision_color};'
+                    f'border-radius:6px;padding:0.6rem 1rem;font-size:0.88rem;">'
+                    f'<b>👤 Staff Decision: {review_status}</b>&nbsp;&nbsp;'
+                    f'<span style="color:#555">Reviewed by <b>{item_ref.get("reviewed_by","—")}</b>'
+                    f' on {item_ref.get("reviewed_at","—")}</span><br>'
+                    f'Approved Amount: <b>₹{approved_amt:.2f} Cr</b>'
+                    + (f'<br><span style="color:#555">Justification: '
+                       f'{item_ref.get("staff_justification","")}</span>'
+                       if item_ref.get("staff_justification") else '')
+                    + '</div>',
+                    unsafe_allow_html=True
+                )
+                if st.button("✏️ Edit Review", key=f"edit_{widget_key}", help="Reset and re-review"):
+                    item_ref['staff_review_status'] = 'Pending'
+                    st.rerun()
+                return
+
+            # ── Pending review form ──
+            st.markdown('<b>👤 Staff Review</b>', unsafe_allow_html=True)
+            review_action = st.radio(
+                "Review Action:",
+                ["Accept", "Override Amount"],
+                key=f"ra_{widget_key}",
+                horizontal=True
+            )
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if review_action == "Override Amount":
+                    new_amount = st.number_input(
+                        "New Approved Amount [Cr]:",
+                        value=float(allowable_amount or 0),
+                        step=0.01,
+                        format="%.2f",
+                        key=f"amt_{widget_key}"
+                    )
+                else:
+                    new_amount = allowable_amount
+                reviewed_by = st.text_input("Reviewed By:", key=f"rb_{widget_key}")
+            with col2:
+                justification = st.text_area(
+                    "Justification (required for Override):",
+                    key=f"jst_{widget_key}",
+                    height=90
+                )
+
+            if st.button("✅ Submit Review", key=f"sub_{widget_key}", type="primary"):
+                if not reviewed_by:
+                    st.error("Please enter your name.")
+                elif review_action == "Override Amount" and not justification.strip():
+                    st.error("Justification is required when overriding amount.")
+                else:
+                    item_ref['staff_review_status'] = (
+                        'Overridden' if review_action == "Override Amount" else 'Accepted'
+                    )
+                    item_ref['reviewed_by']         = reviewed_by
+                    item_ref['reviewed_at']         = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    item_ref['staff_justification'] = justification.strip()
+                    if review_action == "Override Amount":
+                        item_ref['staff_approved_amount'] = new_amount
+                    st.success(f"✅ Review submitted by {reviewed_by}")
+                    st.rerun()
+
+        # ── Review progress summary (shown above line item tables) ──
+        def count_reviews(r):
+            """Count reviewed vs total line items across all SBUs."""
+            total, done = 0, 0
+            for v in r.get('line_items', {}).values():
+                if v.get('status') in ('skipped', 'error'):
+                    continue
+                total += 1
+                if v.get('staff_review_status') in ('Accepted', 'Overridden'):
+                    done += 1
+            for item in r.get('sbu_t', {}).get('line_items', []):
+                if isinstance(item, dict):
+                    total += 1
+                    if item.get('staff_review_status') in ('Accepted', 'Overridden'):
+                        done += 1
+            for item in r.get('sbu_d', {}).get('line_items', []):
+                if isinstance(item, dict):
+                    total += 1
+                    if item.get('staff_review_status') in ('Accepted', 'Overridden'):
+                        done += 1
+            return done, total
+
+        reviewed_count, total_count = count_reviews(results)
+        if total_count > 0:
+            pct = int(reviewed_count / total_count * 100)
+            review_bar_color = "#28a745" if reviewed_count == total_count else "#ffc107"
+            st.markdown(
+                f'<div style="background:white;border-radius:8px;padding:0.7rem 1.2rem;'
+                f'box-shadow:0 1px 4px rgba(0,0,0,0.08);margin-bottom:1rem;">'
+                f'<b>👤 Review Progress:</b> {reviewed_count}/{total_count} line items reviewed'
+                f'&nbsp;({pct}%)'
+                + ('&nbsp; ✅ <b>All reviews complete — ready for draft order.</b>'
+                   if reviewed_count == total_count else
+                   '&nbsp; ⏳ Complete all reviews before generating the draft order.')
+                + '</div>',
+                unsafe_allow_html=True
+            )
+
+        # ─────────────────────────────────────────────────────────────────────
         # CONSOLIDATED SUMMARY
         # ─────────────────────────────────────────────────────────────────────
 
@@ -679,6 +802,13 @@ if uploaded_file:
                 if reg_basis:
                     st.caption(f"📜 Regulatory basis: {reg_basis}")
 
+                # ── Staff review ──
+                render_staff_review_inline(
+                    item_ref         = results['line_items'][key],
+                    widget_key       = f"g_{key}",
+                    allowable_amount = allowable
+                )
+
         # ─────────────────────────────────────────────────────────────────────
         # SBU-T LINE ITEMS
         # ─────────────────────────────────────────────────────────────────────
@@ -723,6 +853,14 @@ if uploaded_file:
                     c1.metric("Claimed (Cr)",   f"₹{cl:.2f}")
                     c2.metric("Allowable (Cr)", f"₹{al:.2f}")
                     c3.metric("Excess (Cr)",    f"{var:+.2f}")
+
+                    # ── Staff review ──
+                    safe_name = name.replace(' ', '_').replace('/', '_').replace('&', 'and')
+                    render_staff_review_inline(
+                        item_ref         = item,
+                        widget_key       = f"t_{safe_name}",
+                        allowable_amount = al
+                    )
 
         # ─────────────────────────────────────────────────────────────────────
         # SBU-D LINE ITEMS
@@ -791,6 +929,14 @@ if uploaded_file:
                             st.markdown(tbl)
                             st.caption("🔴 >₹60/unit  ⚠️ ₹45-60/unit  ✅ <₹45/unit  ⬜ Pass-through")
 
+                    # ── Staff review ──
+                    safe_name_d = name.replace(' ', '_').replace('/', '_').replace('&', 'and')
+                    render_staff_review_inline(
+                        item_ref         = item,
+                        widget_key       = f"d_{safe_name_d}",
+                        allowable_amount = al
+                    )
+
         # ─────────────────────────────────────────────────────────────────────
         # NEXT STEPS (SBU-G)
         # ─────────────────────────────────────────────────────────────────────
@@ -831,6 +977,98 @@ if uploaded_file:
         )
 
         # ─────────────────────────────────────────────────────────────────────
+        # STAFF REVIEW SUMMARY TABLE
+        # ─────────────────────────────────────────────────────────────────────
+
+        st.markdown("---")
+        st.markdown('<div class="section-header">📋 Staff Review Summary</div>',
+                    unsafe_allow_html=True)
+
+        import pandas as pd
+        review_rows = []
+
+        # SBU-G
+        for key, display_name in DISPLAY_NAMES.items():
+            item = results.get('line_items', {}).get(key, {})
+            if not item or item.get('status') in ('skipped', 'error'):
+                continue
+            rs = item.get('staff_review_status', 'Pending')
+            al = get_allowable(item)
+            approved = item.get('staff_approved_amount', al)
+            review_rows.append({
+                'SBU':            'G',
+                'Line Item':      display_name,
+                'System Flag':    get_flag(item),
+                'Allowable (Cr)': round(al, 2),
+                'Approved (Cr)':  round(approved, 2),
+                'Decision':       rs,
+                'Reviewed By':    item.get('reviewed_by', '—'),
+                'Justification':  item.get('staff_justification', ''),
+            })
+
+        # SBU-T
+        for item in results.get('sbu_t', {}).get('line_items', []):
+            if not isinstance(item, dict):
+                continue
+            if 'repayment' in item.get('name', '').lower():
+                continue
+            rs = item.get('staff_review_status', 'Pending')
+            al = item.get('allowable', 0) or 0
+            approved = item.get('staff_approved_amount', al)
+            review_rows.append({
+                'SBU':            'T',
+                'Line Item':      item.get('name', ''),
+                'System Flag':    item.get('flag', 'GREY'),
+                'Allowable (Cr)': round(al, 2),
+                'Approved (Cr)':  round(approved, 2),
+                'Decision':       rs,
+                'Reviewed By':    item.get('reviewed_by', '—'),
+                'Justification':  item.get('staff_justification', ''),
+            })
+
+        # SBU-D
+        for item in results.get('sbu_d', {}).get('line_items', []):
+            if not isinstance(item, dict):
+                continue
+            rs = item.get('staff_review_status', 'Pending')
+            al = item.get('allowable', 0) or 0
+            approved = item.get('staff_approved_amount', al)
+            review_rows.append({
+                'SBU':            'D',
+                'Line Item':      item.get('name', ''),
+                'System Flag':    item.get('flag', 'GREY'),
+                'Allowable (Cr)': round(al, 2),
+                'Approved (Cr)':  round(approved, 2),
+                'Decision':       rs,
+                'Reviewed By':    item.get('reviewed_by', '—'),
+                'Justification':  item.get('staff_justification', ''),
+            })
+
+        if review_rows:
+            df_reviews = pd.DataFrame(review_rows)
+
+            def _highlight_decision(val):
+                if val == 'Accepted':
+                    return 'background-color:#d4edda;color:#155724'
+                elif val == 'Overridden':
+                    return 'background-color:#fff3cd;color:#856404'
+                else:
+                    return 'background-color:#f8d7da;color:#721c24'
+
+            st.dataframe(
+                df_reviews.style.applymap(_highlight_decision, subset=['Decision']),
+                use_container_width=True,
+                hide_index=True
+            )
+
+            pending_items = [r for r in review_rows if r['Decision'] == 'Pending']
+            if pending_items:
+                st.warning(f"⏳ {len(pending_items)} line item(s) still pending review: "
+                           + ", ".join(f"[SBU-{r['SBU']}] {r['Line Item']}" for r in pending_items))
+            else:
+                st.success("✅ All line items reviewed. Justifications will be included in the draft order.")
+
+        # ─────────────────────────────────────────────────────────────────────
         # DOWNLOAD JSON
         # ─────────────────────────────────────────────────────────────────────
 
@@ -851,7 +1089,7 @@ if uploaded_file:
 
             json_out = json.dumps(make_serializable(results), indent=2)
             st.download_button(
-                label="⬇️ Download Full Analysis (JSON)",
+                label="⬇️ Download Full Analysis + Staff Reviews (JSON)",
                 data=json_out,
                 file_name=f"KSERC_Analysis_{meta.get('fiscal_year','2024-25')}.json",
                 mime="application/json",

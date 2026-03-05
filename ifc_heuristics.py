@@ -307,7 +307,11 @@ def heuristic_IFC_GPF_01(
     Formula (Company-wide): [(Opening + Closing GPF) ÷ 2] × GPF Rate (7.10%)
     SBU Allocation: Total GPF Interest × SBU Ratio (based on employee strength)
     
-    For SBU-G: Ratio = 5.40% (as of FY 2023-24)
+    For SBU-G: Ratio = 5.13% (as of FY 2023-24)
+    Derived from TU Order OP No. 49/2024 Table 6.51:
+      SBU-G GPF = ₹9.94 Cr / Total = ₹193.67 Cr = 5.13%
+    Note: This ratio changes every year with employee strength.
+    Do NOT hardcode — always pass the current year ratio as sbu_allocation_ratio.
     
     Args:
         opening_gpf_balance_company: Company-wide opening GPF balance (Cr)

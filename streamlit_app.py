@@ -136,7 +136,7 @@ with st.sidebar:
 
     st.markdown("**👥 SBU-G Allocation Ratios**")
     st.caption("Source: Table 4.51, MYT Order 2022")
-    emp_ratio = st.number_input("Employee Strength Ratio (%)", value=5.40, step=0.01, format="%.2f")
+    emp_ratio = st.number_input("Employee Strength Ratio (%)", value=5.13, step=0.01, format="%.2f")
 
     st.markdown("---")
 

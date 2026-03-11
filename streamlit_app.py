@@ -994,7 +994,7 @@ if uploaded_file:
                 continue
             rs = item.get('staff_review_status', 'Pending')
             al = get_allowable(item)
-            approved = item.get('staff_approved_amount', al)
+            approved = float(item.get('staff_approved_amount') or al or 0)
             review_rows.append({
                 'SBU':            'G',
                 'Line Item':      display_name,
@@ -1014,7 +1014,7 @@ if uploaded_file:
                 continue
             rs = item.get('staff_review_status', 'Pending')
             al = item.get('allowable', 0) or 0
-            approved = item.get('staff_approved_amount', al)
+            approved = float(item.get('staff_approved_amount') or al or 0)
             review_rows.append({
                 'SBU':            'T',
                 'Line Item':      item.get('name', ''),
@@ -1032,7 +1032,7 @@ if uploaded_file:
                 continue
             rs = item.get('staff_review_status', 'Pending')
             al = item.get('allowable', 0) or 0
-            approved = item.get('staff_approved_amount', al)
+            approved = float(item.get('staff_approved_amount') or al or 0)
             review_rows.append({
                 'SBU':            'D',
                 'Line Item':      item.get('name', ''),

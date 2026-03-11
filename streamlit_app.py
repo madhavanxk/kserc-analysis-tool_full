@@ -505,7 +505,7 @@ if uploaded_file:
             # ── Already reviewed ──
             if review_status in ('Accepted', 'Overridden'):
                 decision_color = "#28a745" if review_status == "Accepted" else "#ffc107"
-                approved_amt   = item_ref.get('staff_approved_amount', allowable_amount)
+                approved_amt = float(item_ref.get('staff_approved_amount') or allowable_amount or 0)
                 st.markdown(
                     f'<div style="background:#f0fdf4;border-left:4px solid {decision_color};'
                     f'border-radius:6px;padding:0.6rem 1rem;font-size:0.88rem;">'
@@ -813,31 +813,53 @@ if uploaded_file:
         # SBU-T LINE ITEMS
         # ─────────────────────────────────────────────────────────────────────
 
-        sbu_t_items = [i for i in results.get("sbu_t", {}).get("line_items", []) if isinstance(i, dict)]
-        sbu_t_items = [i for i in sbu_t_items if "repayment" not in i.get("name", "").lower()]
+        # Helper: resolve claimed/allowable regardless of field name convention
+        def t_claimed(item):
+            return float(item.get('claimed') or item.get('claimed_value') or 0)
+        def t_allowable(item):
+            return float(item.get('allowable') or item.get('allowable_value') or 0)
+        def t_name(item):
+            return (item.get('name') or item.get('heuristic_name') or
+                    item.get('heuristic_id') or 'Unknown')
+
+        # SBU-T line_items may be a list OR a dict keyed by item name
+        raw_sbu_t = results.get("sbu_t", {}).get("line_items", [])
+        if isinstance(raw_sbu_t, dict):
+            # Convert dict format to list
+            sbu_t_items = []
+            for k, v in raw_sbu_t.items():
+                if isinstance(v, dict) and v.get('status') not in ('skipped', 'error'):
+                    # Chain items (om_expenses, ifc) have primary_heuristic
+                    primary = v.get('primary_heuristic', v)
+                    primary.setdefault('name', k.replace('_', ' ').title())
+                    sbu_t_items.append(primary)
+        else:
+            sbu_t_items = [i for i in raw_sbu_t if isinstance(i, dict)]
+
+        sbu_t_items = [i for i in sbu_t_items if "repayment" not in t_name(i).lower()]
 
         if sbu_t_items:
             st.markdown("---")
             st.markdown('<div class="section-header">🔌 SBU-T Transmission — Line Item Analysis</div>',
                         unsafe_allow_html=True)
 
-            tc_t = sum(i.get('claimed', 0) or 0 for i in sbu_t_items)
-            ta_t = sum(i.get('allowable', 0) or 0 for i in sbu_t_items)
+            tc_t = sum(t_claimed(i)   for i in sbu_t_items)
+            ta_t = sum(t_allowable(i) for i in sbu_t_items)
             tt1, tt2, tt3 = st.columns(3)
             tt1.metric("Claimed (Cr)",   f"₹{tc_t:,.2f}")
             tt2.metric("Allowable (Cr)", f"₹{ta_t:,.2f}")
             tt3.metric("Excess (Cr)",    f"+₹{tc_t - ta_t:,.2f}")
 
             for item in sbu_t_items:
-                name  = item.get('name', '')
+                name  = t_name(item)
                 flag  = item.get('flag', 'GREY')
-                cl    = item.get('claimed', 0) or 0
-                al    = item.get('allowable', 0) or 0
+                cl    = t_claimed(item)
+                al    = t_allowable(item)
                 var   = cl - al
                 icon  = {'RED':'🔴','YELLOW':'🟡','GREEN':'✅'}.get(flag, '⬜')
                 badge = FLAG_BADGE.get(flag, f'<span>{flag}</span>')
                 card  = FLAG_CARD.get(flag, 'card-grey')
-                note  = (item.get('note') or '')[:200]
+                note  = (item.get('note') or item.get('recommendation_text') or '')[:200]
 
                 with st.expander(
                     f"{icon}  {name}  —  Claimed: ₹{cl:.2f} Cr  |  "
@@ -1007,17 +1029,15 @@ if uploaded_file:
             })
 
         # SBU-T
-        for item in results.get('sbu_t', {}).get('line_items', []):
-            if not isinstance(item, dict):
-                continue
-            if 'repayment' in item.get('name', '').lower():
+        for item in sbu_t_items:
+            if 'repayment' in t_name(item).lower():
                 continue
             rs = item.get('staff_review_status', 'Pending')
-            al = item.get('allowable', 0) or 0
+            al = t_allowable(item)
             approved = float(item.get('staff_approved_amount') or al or 0)
             review_rows.append({
                 'SBU':            'T',
-                'Line Item':      item.get('name', ''),
+                'Line Item':      t_name(item),
                 'System Flag':    item.get('flag', 'GREY'),
                 'Allowable (Cr)': round(al, 2),
                 'Approved (Cr)':  round(approved, 2),

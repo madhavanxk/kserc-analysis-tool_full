@@ -252,7 +252,13 @@ def _build_sbu_chapter(
     for idx, (key, item) in enumerate(line_items.items()):
         if not isinstance(item, dict):
             continue
-        if item.get('status') in ('skipped', 'error', None) and not item.get('allowable_value'):
+        # Only skip items explicitly marked as skipped or error
+        if item.get('status') in ('skipped', 'error'):
+            continue
+        # Skip if no useful data at all
+        claimed_check = (item.get('claimed_value') or item.get('claimed') or
+                         item.get('primary_heuristic', {}).get('claimed_value') or 0)
+        if claimed_check == 0 and not item.get('allowable_value') and not item.get('allowable'):
             continue
 
         name = display_map.get(key, key.replace('_', ' ').title())
@@ -268,17 +274,24 @@ def _build_sbu_chapter(
                  item.get('primary_heuristic', {}).get('calculation_steps') or [])
         calc_note = ' | '.join(str(s) for s in steps[:2] if s)
 
-        # Generate AI narrative
+        # Generate AI narrative or use template
         if api_key:
             prompt = _para_prompt(name, sbu_label, claimed, approved,
                                    flag, regulation, justification, calc_note)
             narrative = _gemini_call(prompt, api_key)
-            time.sleep(0.3)  # rate limit courtesy delay
+            time.sleep(0.3)
+            if not narrative:  # API call failed — use template
+                narrative = None
         else:
+            narrative = None
+
+        if not narrative:
+            action = _flag_word(flag)
             narrative = (
-                f"The Commission has examined the claim of Rs.{claimed:.2f} Cr under "
-                f"{name} for {sbu_label}. After analysis per {regulation}, the Commission "
-                f"approves Rs.{approved:.2f} Cr."
+                f"The Commission has examined the claim of Rs.{claimed:.2f} Cr "
+                f"under {name} for {sbu_label}. After detailed analysis per "
+                f"{regulation}, the Commission {action} the claim and approves "
+                f"Rs.{approved:.2f} Cr."
             )
 
         # Staff override note
@@ -309,26 +322,34 @@ def _build_sbu_chapter(
     table_rows.append(('TOTAL', total_claimed, total_approved))
 
     return {
-        'heading': f'Chapter — {sbu_label} (Generation/Transmission/Distribution Business)',
+        'heading': f'Chapter — {sbu_label}',
         'sections': sections
     }
 
 
 def _build_sbu_t_chapter(sbu_t_data: dict, api_key: str,
                           progress_callback=None) -> dict:
-    """Build SBU-T chapter from its line_items list/dict."""
     raw = sbu_t_data.get('line_items', [])
     if isinstance(raw, dict):
         items = {k: v for k, v in raw.items()
                  if isinstance(v, dict) and v.get('status') not in ('skipped', 'error')}
     else:
-        items = {(i.get('name') or i.get('heuristic_name') or f'item_{n}'): i
-                 for n, i in enumerate(raw) if isinstance(i, dict)}
+        items = {}
+        for i, v in enumerate(raw):
+            if isinstance(v, dict):
+                k = (v.get('name') or v.get('heuristic_name') or
+                     v.get('canonical') or f'item_{i}')
+                normalised = dict(v)
+                if 'claimed' in v and 'claimed_value' not in v:
+                    normalised['claimed_value'] = v['claimed']
+                if 'allowable' in v and 'allowable_value' not in v:
+                    normalised['allowable_value'] = v['allowable']
+                items[k] = normalised
 
     return _build_sbu_chapter(
         'SBU-T (Transmission)',
         items,
-        {k: k.replace('_', ' ').title() for k in items},
+        {k: v.get('name', k.replace('_', ' ').title()) for k, v in items.items()},
         {},
         api_key,
         progress_callback,
@@ -344,13 +365,24 @@ def _build_sbu_d_chapter(sbu_d_data: dict, api_key: str,
         items = {k: v for k, v in raw.items()
                  if isinstance(v, dict) and v.get('status') not in ('skipped', 'error')}
     else:
-        items = {(i.get('name') or i.get('heuristic_name') or f'item_{n}'): i
-                 for n, i in enumerate(raw) if isinstance(i, dict)}
+        # Flat list format — key by name
+        items = {}
+        for i, v in enumerate(raw):
+            if isinstance(v, dict):
+                k = (v.get('name') or v.get('heuristic_name') or
+                     v.get('canonical') or f'item_{i}')
+                # Normalise field names: list items use 'claimed'/'allowable'
+                normalised = dict(v)
+                if 'claimed' in v and 'claimed_value' not in v:
+                    normalised['claimed_value'] = v['claimed']
+                if 'allowable' in v and 'allowable_value' not in v:
+                    normalised['allowable_value'] = v['allowable']
+                items[k] = normalised
 
     return _build_sbu_chapter(
         'SBU-D (Distribution)',
         items,
-        {k: k.replace('_', ' ').title() for k in items},
+        {k: v.get('name', k.replace('_', ' ').title()) for k, v in items.items()},
         {},
         api_key,
         progress_callback,

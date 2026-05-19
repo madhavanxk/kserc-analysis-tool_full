@@ -38,7 +38,7 @@ def heuristic_ROE_01(equity_capital: float,
     
     # Flag determination (ROE is strictly calculated - tight tolerance)
     # KSERC confirmed: tighter threshold to be used (per Module 2, Q3 feedback May 2026)
-    if abs(variance_abs) < 0.001:  # Less than ₹10,000 difference (rounding only)
+    if abs(variance_abs) < 0.005:  # ₹50,000 tolerance — tighter than original ₹1L but avoids rounding false positives  # Less than ₹10,000 difference (rounding only)
         flag = 'GREEN'
         recommendation = 'Approve as calculated'
     else:

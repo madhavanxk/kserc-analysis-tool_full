@@ -56,7 +56,7 @@ WEIGHTED_INFLATION_PCT = {
 # =============================================================================
 
 # Base year O&M for SBU-G as approved in TU order dated 14.06.2022
-OM_BASE_YEAR_SBU_G = 156.16  # Rs Cr (2021-22)
+OM_BASE_YEAR_SBU_G = 156.15  # Rs Cr (2021-22) — confirmed by KSERC May 2026
 
 # Component ratios (MYT Order 2022, Table 4.23)
 OM_COMPONENT_RATIOS = {
@@ -218,8 +218,25 @@ TRANS_AVAILABILITY_TARGET = 98.50   # %
 # Revenue gap deferral threshold for transmission incentive
 TRANS_INCENTIVE_DEFERRAL_GAP = 5000.0  # Rs Cr
 
-# Unbridged revenue gap from 2023-24 True-up Order (placeholder)
-UNBRIDGED_REVENUE_GAP_2024_25 = 6408.37  # Rs Cr (from 2023-24 order)
+# Unbridged revenue gap from 2023-24 True-up Order (Para 7.23, confirmed KSERC May 2026)
+UNBRIDGED_REVENUE_GAP_2024_25 = 6645.301  # Rs Cr (corrected from 6408.37)
+
+# =============================================================================
+# IFC — LONG-TERM LOAN CORRECTIONS (KSERC confirmed May 2026, Module 5)
+# =============================================================================
+
+# Opening normative loan SBU-G for FY 2024-25
+# Confirmed by KSERC: closing balance from last approved TU order
+IFC_OPENING_NORMATIVE_LOAN_SBU_G = 1149.51   # Rs Cr
+
+# Disputed APTEL amount included in KSEB's opening loan — must be excluded
+# KSERC Module 5 Q2: ₹135.23 Cr still subject to APTEL/court proceedings
+IFC_DISPUTED_APTEL_AMOUNT = 135.23   # Rs Cr
+
+# Master Trust items KSEB incorrectly includes in O&M base for WC calculation
+# This is a recurring error per KSERC (Module 5 Q4)
+IFC_MT_BOND_REPAY_IN_OM   = 21.99   # Rs Cr — MT bond repayment in KSEB O&M
+IFC_MT_ADDL_CONTRIB_IN_OM = 21.60   # Rs Cr — MT additional contribution in KSEB O&M
 
 # SBU-T O&M normative norms (Annexure-7, TR 2021, base year 2021-22)
 SBU_T_BASE_YEAR_NORMS = {
@@ -228,10 +245,11 @@ SBU_T_BASE_YEAR_NORMS = {
     'per_mva':   0.788,    # Rs lakh per MVA
     'per_cktkm': 1.438,    # Rs lakh per ckt-km
 }
-# Inflated norms 2024-25 (after escalation 2022-23: 7.06%, 2023-24: 3.41%)
-SBU_T_NORM_PER_BAY   = 7.884   # Rs lakh per bay
-SBU_T_NORM_PER_MVA   = 0.872   # Rs lakh per MVA
-SBU_T_NORM_PER_CKTKM = 1.592   # Rs lakh per ckt-km
+# Inflated norms 2024-25 (after escalation 2022-23: 7.06%, 2023-24: 3.41%, 2024-25: 3.05%)
+# KSERC confirmed May 2026: CPI 410.64, WPI 154.9, escalation = 3.05%
+SBU_T_NORM_PER_BAY   = 8.124   # Rs lakh per bay   (was 7.884 for 2023-24)
+SBU_T_NORM_PER_MVA   = 0.899   # Rs lakh per MVA   (was 0.872 for 2023-24)
+SBU_T_NORM_PER_CKTKM = 1.641   # Rs lakh per ckt-km (was 1.592 for 2023-24)
 
 # Edamon-Kochi compensation disbursement history (from T17 petition data)
 EDAMON_KOCHI_DISBURSEMENTS = [

@@ -1095,7 +1095,7 @@ if uploaded_file:
                     return 'background-color:#f8d7da;color:#721c24'
 
             st.dataframe(
-                df_reviews.style.applymap(_highlight_decision, subset=['Decision']),
+                df_reviews.style.map(_highlight_decision, subset=['Decision']),
                 use_container_width=True,
                 hide_index=True
             )

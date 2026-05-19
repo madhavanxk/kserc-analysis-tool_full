@@ -95,7 +95,7 @@ def heuristic_OM_NORM_01(base_year_om: float,
     Recalculates base year O&M with actual inflation rates.
     
     Args:
-        base_year_om: Base year (2021-22) O&M = 156.16 Cr
+        base_year_om: Base year (2021-22) O&M = 156.15 Cr (confirmed by KSERC May 2026)
         inflation_2022_23: Actual inflation for 2022-23 (7.06%)
         inflation_2023_24: Actual inflation for 2023-24 (3.41%)
         inflation_2024_25: Actual inflation for 2024-25 (from OM-INFL-01)
@@ -179,10 +179,14 @@ def heuristic_OM_APPORT_01(total_om_approved: float,
                             actual_ag: float,
                             actual_rm: float) -> Dict:
     """
-    OM-APPORT-01: O&M Component Apportionment (Prudence Check)
+    OM-APPORT-01: O&M Component Apportionment (Informational Only)
     
-    Supporting heuristic that checks if actual expenditure components
-    are within normative limits. Does NOT affect final approved amount.
+    IMPORTANT: KSERC confirmed (May 2026) that the Commission approves O&M by
+    applying actual inflation to the total approved base — NOT by checking
+    individual component ratios. This heuristic is therefore INFORMATIONAL ONLY
+    and does NOT affect the flag or approved amount from OM-NORM-01.
+    
+    The component breakdown is retained for staff awareness and future monitoring.
     
     Args:
         total_om_approved: Total O&M approved (from OM-NORM-01)
@@ -191,7 +195,7 @@ def heuristic_OM_APPORT_01(total_om_approved: float,
         actual_rm: Actual R&M expenses from audited accounts
     
     Returns:
-        Heuristic result with prudence check flags for each component
+        Heuristic result with informational component breakdown (flag always GREEN)
     """
     # Fixed component ratios (MYT Order 2022, Table 4.23)
     RATIOS = {
@@ -207,7 +211,10 @@ def heuristic_OM_APPORT_01(total_om_approved: float,
     
     # Component analysis
     components = []
-    overall_flag = 'GREEN'
+    # NOTE: Per KSERC feedback (May 2026), component ratios are INFORMATIONAL ONLY.
+    # The Commission approves O&M via total inflation escalation, not ratio checks.
+    # Flags here do NOT propagate to the line item decision.
+    overall_flag = 'GREEN'  # Always GREEN — this is informational display only
     
     for name, actual, normative, ratio in [
         ('Employee Cost', actual_employee, normative_employee, RATIOS['Employee']),
@@ -262,8 +269,9 @@ def heuristic_OM_APPORT_01(total_om_approved: float,
         )
     
     recommendation = (
-        'Prudence check only - does not affect approved amount. '
-        'Staff should note deviations for future monitoring.'
+        'INFORMATIONAL ONLY — Per KSERC practice, O&M is approved via total inflation '
+        'escalation, not component ratios. This breakdown is for staff awareness only '
+        'and does not affect the approved amount from OM-NORM-01.'
     )
     
     return {
@@ -279,7 +287,7 @@ def heuristic_OM_APPORT_01(total_om_approved: float,
         'flag': overall_flag,
         'recommended_amount': None,  # Supporting heuristic - no amount impact
         'recommendation_text': recommendation,
-        'regulatory_basis': 'MYT Order 2022, Table 4.23 (Component Ratios)',
+        'regulatory_basis': 'MYT Order 2022, Table 4.23 (Component Ratios — Informational Only per KSERC May 2026)',
         
         'calculation_steps': calc_steps,
         'component_details': components,  # Additional detail for UI

@@ -140,9 +140,9 @@ FY_2023_24_TD_SHARE_DEFAULTS = {
     'approved_td_loss_pct': 10.82,          # Static MYT target (for reference only)
     'actual_td_loss_ksebl_pct': 9.70,
     'actual_td_loss_kserc_pct': 9.76,       # KSERC assessed (Annexure 4.5)
-    # Dynamic target: 9.30% (FY 2022-23 actual) - 0.40% = 8.90% (TU Order Para 4.34)
-    # KSEB actual 9.76% > 8.90% → NOT eligible for gain sharing
-    'prior_year_actual_td_loss_pct': 9.30,  # FY 2022-23 actual per TU Order Para 4.34
+    # Dynamic target: 9.70% (FY 2023-24 actual) - 0.40% = 9.30% (for FY 2024-25)
+    # KSERC confirmed (May 2026, Module 12 Q3): FY 2023-24 actual = 9.70%
+    'prior_year_actual_td_loss_pct': 9.70,  # FY 2023-24 actual (confirmed May 2026)
     'annual_loss_reduction_target_pp': 0.40,
     'energy_sales_mu': 28105.07,            # As claimed by KSEBL
     'avg_pp_cost_per_unit': 5.05,           # Rs/kWh
@@ -840,9 +840,9 @@ def heuristic_TD_SHARE_01(
         Dynamic Target = Prior Year Actual T&D Loss% - Annual Reduction Target (0.40%)
 
       Source: TU Order OP No. 49/2024, Para 4.34:
-        FY 2022-23 actual = 9.30%  (Note: NOT 9.27% — use Commission's figure)
+        FY 2023-24 actual = 9.70%  (KSERC confirmed May 2026, Module 12 Q3)
         Annual reduction target = 0.40%
-        FY 2023-24 dynamic target = 9.30% - 0.40% = 8.90%
+        FY 2024-25 dynamic target = 9.70% - 0.40% = 9.30%
 
       HOW TO USE:
         Option A (recommended): Pass prior_year_actual_td_loss_pct.
@@ -856,7 +856,7 @@ def heuristic_TD_SHARE_01(
     - KSERC DISALLOWED the gain sharing — not merely deferred due to revenue gap
     - The ₹131.59 Cr claim was rejected because KSEB missed the dynamic target,
       even though it beat the static MYT target of 10.82%
-    - Also: Actual T&D loss INCREASED from 9.30% (2022-23) to 9.76% (2023-24)
+    - Also: Actual TActual T&D loss INCREASED from 9.30% (2022-23) to 9.76% (2023-24)D loss INCREASED from 9.70% (2023-24) to {actual_td_loss:.2f}% (2024-25)
     - Commission decided not to impose penalty either, given force majeure
       (unprecedented demand surge of 10.75%)
     """
@@ -920,7 +920,7 @@ def heuristic_TD_SHARE_01(
         "Reasons for disallowance:",
         f"  1. KSEB missed dynamic target ({effective_target_pct:.2f}%): actual {actual_td_loss:.2f}% > target",
         f"  2. Unbridged revenue gap of ₹{unbridged_revenue_gap:.2f} Cr as on 31.03.2023",
-        f"  3. Actual T&D loss INCREASED from 9.30% (2022-23) to {actual_td_loss:.2f}% (2023-24)",
+        f"  3. Actual TActual T&D loss INCREASED from 9.30% (2022-23) to {actual_td_loss:.2f}% (2023-24)D loss vs prior year (9.70%) — see KSERC assessment",
         "  4. Loss reduction is relative to static MYT target, not absolute improvement",
         "",
         "Note: Commission also decided NOT to impose penalty for under-achievement,",

@@ -142,7 +142,7 @@ with st.sidebar:
 
     st.markdown("**🔧 O&M Base Year**")
     st.caption("Source: TU Order 14.06.2022")
-    om_base = st.number_input("O&M Base Year Amount (Cr)", value=156.16, step=0.01, format="%.2f")
+    om_base = st.number_input("O&M Base Year Amount (Cr)", value=156.15, step=0.01, format="%.2f")
 
     st.markdown("---")
 
@@ -164,6 +164,20 @@ with st.sidebar:
         'order. Changes here override hardcoded values for this run only.</div>',
         unsafe_allow_html=True
     )
+
+    st.markdown("---")
+    st.markdown("**🏦 IFC — Long-Term Loan (KSERC Confirmed May 2026)**")
+    st.caption("Closing balance from last approved truing-up order")
+    ifc_opening_loan      = st.number_input("Opening Normative Loan SBU-G (Cr)",     value=1149.51, step=0.01, format="%.2f",
+                                             help="KSERC confirmed: ₹1,149.51 Cr")
+    ifc_disputed          = st.number_input("Disputed APTEL Amount to Exclude (Cr)",  value=135.23,  step=0.01, format="%.2f",
+                                             help="KSERC confirmed: ₹135.23 Cr excluded from opening loan")
+
+    st.markdown("---")
+    st.markdown("**⚠️ IFC — Master Trust Items in KSEB O&M Base**")
+    st.caption("KSEB incorrectly includes these in O&M for WC calculation (strip before computing WC interest)")
+    mt_bond_repay_in_om   = st.number_input("MT Bond Repayment included in O&M (Cr)",         value=21.99, step=0.01, format="%.2f")
+    mt_addl_contrib_in_om = st.number_input("MT Additional Contribution included in O&M (Cr)", value=21.60, step=0.01, format="%.2f")
 
     st.markdown("---")
     st.markdown("**📝 Draft Order Generation**")
@@ -348,6 +362,11 @@ if uploaded_file:
             KC.MT_BOND_TOTAL_COMPANY['2024-25']  = mt_total
             KC.MT_BOND_APPROVED_SBU_G['2024-25'] = mt_approved
             KC.NTI_BASELINE_SBU_G['2024-25']     = nti_baseline
+            # IFC corrections (KSERC confirmed May 2026)
+            KC.IFC_OPENING_NORMATIVE_LOAN_SBU_G  = ifc_opening_loan
+            KC.IFC_DISPUTED_APTEL_AMOUNT         = ifc_disputed
+            KC.IFC_MT_BOND_REPAY_IN_OM           = mt_bond_repay_in_om
+            KC.IFC_MT_ADDL_CONTRIB_IN_OM         = mt_addl_contrib_in_om
         except Exception as e:
             st.warning(f"Could not override constants: {e}")
 

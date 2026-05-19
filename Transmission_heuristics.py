@@ -20,18 +20,23 @@ from datetime import datetime
 # =============================================================================
 
 def heuristic_OM_TRANS_NORM_01(
-    # O&M norms per unit (Rs. lakh) - from Annexure-7 with actual inflation
-    norm_per_bay: float = 7.884,
-    norm_per_mva: float = 0.872,
-    norm_per_cktkm: float = 1.592,
-    # Opening parameters (beginning of year)
+    # O&M norms per unit (Rs. lakh) — escalated to 2024-25
+    # Base (2021-22): Bay=7.121, MVA=0.788, CktKm=1.438
+    # After 2022-23 (7.06%): 7.624 / 0.844 / 1.540
+    # After 2023-24 (3.41%): 7.884 / 0.872 / 1.592
+    # After 2024-25 (3.05%): 8.124 / 0.899 / 1.641  ← KSERC confirmed 3.05%
+    norm_per_bay: float = 8.124,
+    norm_per_mva: float = 0.899,
+    norm_per_cktkm: float = 1.641,
+    # Opening parameters — KSERC confirmed May 2026 (Module 10 Q1)
+    # Closing quantities: Bays 2929, Lines 10800, MVA 26373
     opening_bays: int = 2905,
-    opening_mva: float = 25344.5,
+    opening_mva: float = 25587.5,   # Corrected: 26373 - 785.5 additions = 25587.5
     opening_cktkm: float = 10633.90,
     # Additions during year
     added_bays: int = 24,
-    added_mva: float = 785.0,
-    added_cktkm: float = 166.23,
+    added_mva: float = 785.5,       # Corrected to reconcile with closing 26373
+    added_cktkm: float = 166.10,    # Corrected to reconcile with closing 10800
     # Financial figures (Rs. Cr)
     myt_approved_om: float = 644.81,
     actual_om_accounts: float = 588.95,
@@ -40,6 +45,7 @@ def heuristic_OM_TRANS_NORM_01(
     base_year_norms: Optional[Dict] = None,
     escalation_2022_23: float = 0.0706,
     escalation_2023_24: float = 0.0341,
+    escalation_2024_25: float = 0.0305,  # KSERC confirmed: CPI 410.64, WPI 154.9 → 3.05%
 ) -> Dict:
     """
     OM-TRANS-NORM-01: Normative O&M Expenses for Transmission
@@ -113,6 +119,8 @@ def heuristic_OM_TRANS_NORM_01(
         f"  Base year norms: Bay={base_year_norms['per_bay']}, MVA={base_year_norms['per_mva']}, CktKm={base_year_norms['per_cktkm']}",
         f"  Escalation 2022-23: {escalation_2022_23*100:.2f}% (actual CPI/WPI 70:30)",
         f"  Escalation 2023-24: {escalation_2023_24*100:.2f}% (actual CPI/WPI 70:30)",
+        f"  Escalation 2024-25: {escalation_2024_25*100:.2f}% (KSERC confirmed: CPI 410.64, WPI 154.9)",
+        f"  Applied norms: Bay=₹{norm_per_bay:.3f} Lakh, MVA=₹{norm_per_mva:.3f} Lakh, CktKm=₹{norm_per_cktkm:.3f} Lakh",
         "",
         "Step 5: Comparison",
         f"  MYT Approved: ₹{myt_approved_om:.2f} Cr",

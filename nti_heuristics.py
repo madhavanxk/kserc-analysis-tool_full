@@ -26,6 +26,9 @@ def heuristic_NTI_01(
     other_exclusions: float = 0.0,
     other_additions: float = 0.0,
     
+    # MNRE Performance Incentive exclusion (confirmed by KSERC May 2026)
+    exclusion_mnre_performance_incentive: float = 0.0,
+    
     # KSEB's claimed NTI
     claimed_nti: float = 0.0
 ) -> Dict:
@@ -63,6 +66,7 @@ def heuristic_NTI_01(
         exclusion_nilaavu_scheme +
         exclusion_provision_reversals +
         exclusion_kwa_unrealized +
+        exclusion_mnre_performance_incentive +
         other_exclusions
     )
     
@@ -123,6 +127,8 @@ def heuristic_NTI_01(
         calc_steps.append(f"Less: Provision reversals (unrealized): ₹{exclusion_provision_reversals:.2f} Cr")
     if exclusion_kwa_unrealized > 0:
         calc_steps.append(f"Less: KWA unrealized interest: ₹{exclusion_kwa_unrealized:.2f} Cr")
+    if exclusion_mnre_performance_incentive > 0:
+        calc_steps.append(f"Less: MNRE Performance Incentive: ₹{exclusion_mnre_performance_incentive:.2f} Cr")
     if other_exclusions > 0:
         calc_steps.append(f"Less: Other exclusions: ₹{other_exclusions:.2f} Cr")
     
@@ -168,6 +174,7 @@ def heuristic_NTI_01(
         'nilaavu_scheme': exclusion_nilaavu_scheme,
         'provision_reversals': exclusion_provision_reversals,
         'kwa_unrealized': exclusion_kwa_unrealized,
+        'mnre_performance_incentive': exclusion_mnre_performance_incentive,
         'other': other_exclusions,
         'total': total_exclusions
     }

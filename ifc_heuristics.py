@@ -54,16 +54,21 @@ def heuristic_IFC_LTL_01(
     heuristic_name = "Interest on Long-Term Loans"
     line_item = "Interest & Finance Charges"
     
-    # Step 1: Calculate closing normative loan
-    closing_normative_loan = opening_normative_loan + gfa_additions - depreciation
+    # Step 1: Exclude disputed APTEL amount from opening loan before calculation
+    # KSERC confirmed (May 2026): ₹135.23 Cr disputed amount must be excluded
+    # Opening loan confirmed at ₹1,149.51 Cr; net for calculation = 1149.51 - 135.23 = 1014.28 Cr
+    effective_opening_loan = opening_normative_loan - disputed_claims
+
+    # Step 2: Calculate closing normative loan
+    closing_normative_loan = effective_opening_loan + gfa_additions - depreciation
     
-    # Step 2: Calculate average normative loan
-    average_normative_loan = (opening_normative_loan + closing_normative_loan) / 2
+    # Step 3: Calculate average normative loan
+    average_normative_loan = (effective_opening_loan + closing_normative_loan) / 2
     
-    # Step 3: Calculate allowable interest
+    # Step 4: Calculate allowable interest
     allowable_interest = (average_normative_loan * opening_interest_rate) / 100
     
-    # Step 4: Calculate variance
+    # Step 5: Calculate variance
     variance_absolute = claimed_interest - allowable_interest
     variance_percentage = (variance_absolute / allowable_interest * 100) if allowable_interest != 0 else 0
     
@@ -104,6 +109,8 @@ def heuristic_IFC_LTL_01(
     # Calculation steps for transparency
     calculation_steps = [
         f"Opening Normative Loan (01.04.YYYY): ₹{opening_normative_loan:.2f} Cr",
+        f"Less: Disputed APTEL amount (excluded per KSERC): ₹{disputed_claims:.2f} Cr" if disputed_claims > 0 else "No disputed claims in opening loan",
+        f"Effective Opening Loan: ₹{effective_opening_loan:.2f} Cr",
         f"Add: GFA Additions (FY): ₹{gfa_additions:.2f} Cr",
         f"Less: Depreciation (FY): ₹{depreciation:.2f} Cr",
         f"Closing Normative Loan (31.03.YYYY): ₹{closing_normative_loan:.2f} Cr",
@@ -113,9 +120,6 @@ def heuristic_IFC_LTL_01(
         f"KSEB Claimed: ₹{claimed_interest:.2f} Cr",
         f"Variance: ₹{variance_absolute:.2f} Cr ({variance_percentage:+.2f}%)"
     ]
-    
-    if disputed_claims > 0:
-        calculation_steps.insert(1, f"Note: Disputed claims of ₹{disputed_claims:.2f} Cr detected")
     
     # Regulatory basis
     regulatory_basis = "Regulation 29, Tariff Regulations 2021; Normative loan methodology per MYT framework"
@@ -167,6 +171,9 @@ def heuristic_IFC_WC_01(
     opening_gfa_excl_land: float,
     sbi_eblr_rate: float,
     claimed_wc_interest: float,
+    # Master Trust items to strip from KSEB's O&M base (KSERC confirmed May 2026)
+    master_trust_bond_repayment_in_om: float = 0.0,   # e.g. ₹21.99 Cr
+    master_trust_addl_contribution_in_om: float = 0.0, # e.g. ₹21.60 Cr
     staff_name: str = "",
     staff_approved_amount: Optional[float] = None,
     staff_justification: str = ""
@@ -201,8 +208,15 @@ def heuristic_IFC_WC_01(
     heuristic_name = "Interest on Working Capital"
     line_item = "Interest & Finance Charges"
     
+    # Step 0: Strip any Master Trust items KSEB incorrectly included in O&M base
+    # KSERC confirmed (May 2026, Module 5 Q4): KSEB included MT bond repayment
+    # (₹21.99 Cr) and additional contribution (₹21.60 Cr) in O&M — this is a
+    # recurring error. These are NOT O&M; strip before WC calculation.
+    master_trust_total_in_om = master_trust_bond_repayment_in_om + master_trust_addl_contribution_in_om
+    clean_om_for_wc = approved_om_expenses - master_trust_total_in_om
+
     # Step 1: Calculate working capital components
-    one_month_om = approved_om_expenses / 12
+    one_month_om = clean_om_for_wc / 12
     one_percent_spares = opening_gfa_excl_land * 0.01
     working_capital = one_month_om + one_percent_spares
     
@@ -236,6 +250,14 @@ def heuristic_IFC_WC_01(
     # Calculation steps
     calculation_steps = [
         f"Approved O&M Expenses (from OM-NORM-01): ₹{approved_om_expenses:.2f} Cr",
+    ]
+    if master_trust_total_in_om > 0:
+        calculation_steps.extend([
+            f"Less: MT Bond Repayment (incorrectly in O&M): ₹{master_trust_bond_repayment_in_om:.2f} Cr",
+            f"Less: MT Additional Contribution (incorrectly in O&M): ₹{master_trust_addl_contribution_in_om:.2f} Cr",
+            f"Clean O&M for WC Calculation: ₹{clean_om_for_wc:.2f} Cr",
+        ])
+    calculation_steps.extend([
         f"One Month O&M (÷12): ₹{one_month_om:.2f} Cr",
         f"Opening GFA (excl. land): ₹{opening_gfa_excl_land:.2f} Cr",
         f"1% Spares: ₹{one_percent_spares:.2f} Cr",
@@ -245,7 +267,7 @@ def heuristic_IFC_WC_01(
         f"Allowable WC Interest: ₹{allowable_wc_interest:.2f} Cr",
         f"KSEB Claimed: ₹{claimed_wc_interest:.2f} Cr",
         f"Variance: ₹{variance_absolute:.2f} Cr ({variance_percentage:+.2f}%)"
-    ]
+    ])
     
     regulatory_basis = "Regulation 32, Tariff Regulations 2021; Regulation 3(12) (Base rate = SBI EBLR)"
     
